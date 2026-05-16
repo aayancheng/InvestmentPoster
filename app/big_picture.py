@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from chart_main import build_figure, COLOURS, DISPLAY_NAMES, MAIN_SERIES_ORDER
 
@@ -16,6 +17,17 @@ st.set_page_config(
     page_title="2025 The Big Picture",
     layout="wide",
     initial_sidebar_state="expanded",
+)
+
+# Clear Streamlit's cached sidebar state from localStorage so initial_sidebar_state="expanded"
+# always wins, even when a prior session left the sidebar collapsed.
+components.html(
+    "<script>"
+    "const k = Object.keys(window.parent.localStorage)"
+    "    .find(k => k.toLowerCase().includes('sidebar'));"
+    "if (k) window.parent.localStorage.removeItem(k);"
+    "</script>",
+    height=0,
 )
 
 st.markdown(
