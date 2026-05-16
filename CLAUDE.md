@@ -58,6 +58,15 @@ YanCheng (aayancheng@gmail.com). Background in credit risk analytics / financial
 4. **Stress test as real user.** Run on a hypothetical portfolio, refine awkward parts.
 5. **(Optional) Web app.** Next.js + FastAPI + SQLite. Multi-user. No brokerage integration.
 
+## Current UI state — Big Picture v0.1.1
+
+`app/big_picture.py` uses a static sidebar layout:
+
+- **Sidebar always open, non-collapsible.** `initial_sidebar_state="expanded"` + CSS hides `[data-testid="stSidebarHeader"]` (the collapse arrow) and `[data-testid="stHeader"]` (the top bar that holds Deploy + hamburger).
+- **All controls live in the sidebar:** start-year slider, then per-series checkboxes. Each row uses `st.columns([5, 1])` — checkbox in the wide column, 3px colour swatch in the narrow column, inline to the right of the label.
+- **Main area:** title, subtitle, Plotly chart, methodology expander. No controls.
+- **localStorage caveat:** Streamlit caches sidebar state per browser. On a fresh browser session the sidebar may start collapsed despite `initial_sidebar_state="expanded"`. Fix: clear localStorage once in DevTools (`localStorage.clear()`) and reload.
+
 ## Parallel track: The Big Picture poster
 
 A reproduction of the *Investments Illustrated* "2025 The Big Picture" poster — a 90-year log-scale chart of Canadian and US asset classes with drawdown overlay, FX band, inflation/prime band, ~70 event annotations, a decade-returns strip, and three inset panels (portfolio compositions, risk/return scatter, GIC returns).

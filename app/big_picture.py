@@ -9,13 +9,13 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from chart_main import build_figure, DISPLAY_NAMES, MAIN_SERIES_ORDER
+from chart_main import build_figure, COLOURS, DISPLAY_NAMES, MAIN_SERIES_ORDER
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="2025 The Big Picture",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -30,7 +30,13 @@ st.markdown(
         }
         #MainMenu { visibility: hidden; }
         footer { visibility: hidden; }
-        [data-testid="collapsedControl"] { display: none; }
+        /* Remove the top header bar entirely (contains Deploy + hamburger) */
+        [data-testid="stHeader"] { display: none !important; }
+        /* Reclaim the space the header bar occupied */
+        [data-testid="stAppViewContainer"] { padding-top: 0 !important; }
+        [data-testid="stMain"] > div:first-child { padding-top: 0 !important; }
+        /* Hide the sidebar header row — only contains the collapse arrow */
+        [data-testid="stSidebarHeader"] { display: none !important; }
         .stCheckbox { margin-bottom: 0 !important; }
         .stCheckbox label { font-size: 0.82rem !important; }
     </style>
@@ -60,21 +66,7 @@ for _key in MAIN_SERIES_ORDER:
     if f"cb_{_key}" not in st.session_state:
         st.session_state[f"cb_{_key}"] = True
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
-st.markdown("## 2025 The Big Picture")
-st.markdown(
-    "<p style='font-size:0.85rem;color:#888;margin-top:-0.5rem;'>"
-    "Hypothetical growth of $1,000 CAD reinvested &mdash; major asset classes, 1956&ndash;2025. "
-    "All USD series FX-adjusted to CAD. "
-    "Changing the start year rebases every series to $1,000 on that date."
-    "</p>",
-    unsafe_allow_html=True,
-)
-start_year = st.slider("Start year", 1956, 2010, 1956, 1)
-
-st.divider()
-
-# ── Series toggles (plain checkboxes — colour shown in chart legend) ──────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 SHORT_NAMES = {
     "US_Stocks":            "U.S. Stocks",
     "Aggressive":           "Aggressive",
@@ -87,13 +79,34 @@ SHORT_NAMES = {
     "Inflation":            "Inflation",
 }
 
-visible: dict[str, bool] = {}
-toggle_cols = st.columns(len(MAIN_SERIES_ORDER))
-for i, key in enumerate(MAIN_SERIES_ORDER):
-    with toggle_cols[i]:
-        visible[key] = st.checkbox(SHORT_NAMES[key], key=f"cb_{key}")
+with st.sidebar:
+    st.markdown("### Controls")
+    start_year = st.slider("Start year", 1956, 2010, 1956, 1)
+    st.markdown("---")
+    st.markdown("**Series**")
+    visible: dict[str, bool] = {}
+    for key in MAIN_SERIES_ORDER:
+        color = COLOURS.get(key, "#888888")
+        col_cb, col_swatch = st.columns([5, 1])
+        with col_cb:
+            visible[key] = st.checkbox(SHORT_NAMES[key], key=f"cb_{key}")
+        with col_swatch:
+            st.markdown(
+                f"<div style='height:3px;background:{color};border-radius:2px;"
+                f"margin-top:14px;'></div>",
+                unsafe_allow_html=True,
+            )
 
-st.divider()
+# ── Hero ──────────────────────────────────────────────────────────────────────
+st.markdown("## 2025 The Big Picture")
+st.markdown(
+    "<p style='font-size:0.85rem;color:#888;margin-top:-0.5rem;'>"
+    "Hypothetical growth of $1,000 CAD reinvested &mdash; major asset classes, 1956&ndash;2025. "
+    "All USD series FX-adjusted to CAD. "
+    "Changing the start year rebases every series to $1,000 on that date."
+    "</p>",
+    unsafe_allow_html=True,
+)
 
 # ── Main chart ────────────────────────────────────────────────────────────────
 fig = build_figure(df, start_year=start_year, visible=visible)
