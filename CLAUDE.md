@@ -60,12 +60,19 @@ YanCheng (aayancheng@gmail.com). Background in credit risk analytics / financial
 
 ## Current UI state — Big Picture v0.1.1
 
-`app/big_picture.py` uses a static sidebar layout:
+`app/big_picture.py` uses a static sidebar layout. Branch: `feature/dashboard-redesign` (PR #1 open).
 
 - **Sidebar always open, non-collapsible.** `initial_sidebar_state="expanded"` + CSS hides `[data-testid="stSidebarHeader"]` (the collapse arrow) and `[data-testid="stHeader"]` (the top bar that holds Deploy + hamburger).
+- **localStorage fix.** On load, a zero-height `streamlit.components.v1.html` component injects JS that clears Streamlit's cached sidebar key from `window.parent.localStorage`, so `initial_sidebar_state="expanded"` always wins — no manual DevTools step needed.
 - **All controls live in the sidebar:** start-year slider, then per-series checkboxes. Each row uses `st.columns([5, 1])` — checkbox in the wide column, 3px colour swatch in the narrow column, inline to the right of the label.
 - **Main area:** title, subtitle, Plotly chart, methodology expander. No controls.
-- **localStorage caveat:** Streamlit caches sidebar state per browser. On a fresh browser session the sidebar may start collapsed despite `initial_sidebar_state="expanded"`. Fix: clear localStorage once in DevTools (`localStorage.clear()`) and reload.
+
+**Run the app:**
+```bash
+export $(cat .env | xargs) && .venv/bin/streamlit run app/big_picture.py --server.port 8502
+```
+
+**Next planned step — v0.2 dashboard redesign:** dark shell (`#0a0a0a`) around a white chart, sidebar nav with coming-soon items, KPI cards (end value, CAGR, max drawdown, time window). Design spec at `docs/superpowers/specs/2026-05-14-big-picture-dashboard-redesign-design.md`.
 
 ## Parallel track: The Big Picture poster
 

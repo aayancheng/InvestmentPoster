@@ -16,7 +16,7 @@ An interactive reproduction of the *Investments Illustrated "2025 The Big Pictur
 streamlit run app/big_picture.py
 ```
 
-Open `http://localhost:8502`. The static sidebar holds all controls: a start-year slider to rebase every series to a chosen date, and per-series toggles with inline colour swatches.
+Open `http://localhost:8502`. The static sidebar (always open, non-collapsible) holds all controls: a start-year slider to rebase every series to a chosen date, and per-series toggles with inline colour swatches. A JS snippet clears Streamlit's cached sidebar state on load so the sidebar always opens correctly.
 
 ### 2 · Allocation Engine (in progress)
 
@@ -98,9 +98,10 @@ Pre-1956 Canadian data requires paid CRSP-Canada — out of scope for v1.
 | Stage | Status |
 |---|---|
 | Big Picture poster v0.1 — data pipeline + 4-panel chart | ✅ Done |
-| Big Picture v0.1.1 — static sidebar, controls, UI polish | ✅ Done |
-| Big Picture v0.2 — drawdown annotations + event labels | 🔜 Next |
-| Allocation engine notebook | 🔜 Next |
+| Big Picture v0.1.1 — static sidebar, inline swatches, localStorage fix | ✅ Done |
+| Big Picture v0.2 — dark shell dashboard, KPI cards, coming-soon nav | 🔜 Next (PR #1 open) |
+| Big Picture v0.2.1 — drawdown annotations + event labels | Planned |
+| Allocation engine notebook | Planned |
 | Risk-profiling conversation | Planned |
 | Streamlit MVP (profile → drift dashboard → trade tickets) | Planned |
 
