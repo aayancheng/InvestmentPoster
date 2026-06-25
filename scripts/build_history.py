@@ -298,6 +298,67 @@ def load_us_smallcap() -> pd.Series:
     return tr
 
 
+def _splice_etf(proxy: pd.Series, etf: pd.Series, name: str) -> pd.Series:
+    """Splice a proxy index (early) with a real ETF (modern), USD growth-of-$1000.
+
+    Takes the proxy up to (not including) the ETF's first date, scales the ETF
+    so it continues seamlessly from the proxy's last level, concatenates, and
+    rebases the whole series to 1000 at the first point. Mirrors load_tsx().
+
+    Both inputs must be total-return (auto_adjust close) so the splice is
+    TR-on-TR and continuous.
+    """
+    etf = etf.dropna()
+    proxy = proxy.dropna()
+    cut = etf.index[0]
+    pre = proxy.loc[:cut].iloc[:-1]   # up to but not including ETF start
+    if pre.empty:
+        tr = etf / etf.iloc[0] * 1000
+    else:
+        etf_scaled = etf / etf.iloc[0] * pre.iloc[-1]
+        tr = pd.concat([pre, etf_scaled])
+        tr = tr / tr.iloc[0] * 1000
+    tr.name = name
+    return tr
+
+
+def load_voo(shiller_usd: pd.Series) -> pd.Series:
+    """VOO (S&P 500 core) in USD, back to 1956 via Shiller S&P 500 TR splice.
+
+    Pre-2010-09 : Shiller S&P 500 total return (passed in to avoid re-fetch).
+    2010-09+    : VOO adjusted close.
+    VOO *is* the S&P 500, so this is the cleanest possible proxy.
+    """
+    voo = _yf_close("VOO", "voo_prices.csv").dropna()
+    return _splice_etf(shiller_usd, voo, "VOO_USD")
+
+
+def load_vgt() -> pd.Series:
+    """VGT (US Information Technology, growth tilt) in USD.
+
+    Pre-2004-01 : QQQ (Nasdaq-100 ETF, total return, from 1999-03).
+    2004-01+    : VGT adjusted close.
+    Proxy caveat: QQQ is concentrated growth, not a pure IT-sector replica
+    (monthly-return corr 0.978 over the 2004+ overlap).
+    """
+    qqq = _yf_close("QQQ", "qqq_prices.csv").dropna()
+    vgt = _yf_close("VGT", "vgt_prices.csv").dropna()
+    return _splice_etf(qqq, vgt, "VGT_USD")
+
+
+def load_schd() -> pd.Series:
+    """SCHD (US dividend equity, income) in USD.
+
+    Pre-2011-10 : VYM (Vanguard High Dividend Yield ETF, total return, 2006-11).
+    2011-10+    : SCHD adjusted close.
+    Proxy caveat: VYM lacks SCHD's quality screen but tracks closely
+    (monthly-return corr 0.970 over the 2011+ overlap).
+    """
+    vym = _yf_close("VYM", "vym_prices.csv").dropna()
+    schd = _yf_close("SCHD", "schd_prices.csv").dropna()
+    return _splice_etf(vym, schd, "SCHD_USD")
+
+
 def load_cdn_bond_tr() -> pd.Series:
     """Canadian 10-year government bond total-return index in CAD.
 
@@ -429,6 +490,15 @@ PORTFOLIO_WEIGHTS: dict[str, dict[str, float]] = {
     },
 }
 
+# Simple 3-ETF portfolio (USD) — illustrates the four-sleeve framework's first
+# three sleeves: Core / Growth / Income. Defensive (bonds/cash) intentionally
+# omitted to keep the "simple all-equity ETF" story clean. Sums to 1.0.
+SIMPLE_ETF_WEIGHTS: dict[str, float] = {
+    "VOO_USD":  0.50,   # core broad market (S&P 500)
+    "VGT_USD":  0.25,   # growth tilt (info tech)
+    "SCHD_USD": 0.25,   # income (dividend equity)
+}
+
 
 def build_portfolio(name: str, weights: dict[str, float], levels: pd.DataFrame) -> pd.Series:
     """Growth-of-$1000 with annual January rebalancing.
@@ -504,6 +574,11 @@ def main() -> None:
     prime_ca     = load_prime_ca()
     prime_us     = load_prime_us()
 
+    print("\nLoading USD ETF sleeve (VOO / VGT / SCHD, proxy-spliced):")
+    voo_usd  = load_voo(us_usd)   # reuse already-loaded Shiller S&P 500 TR
+    vgt_usd  = load_vgt()
+    schd_usd = load_schd()
+
     print("\nConverting USD series to CAD:")
     us_stocks   = to_cad(us_usd,       usdcad, "US_Stocks")
     intl_stocks = to_cad(eafe_usd,     usdcad, "International_Stocks")
@@ -522,6 +597,16 @@ def main() -> None:
     aggressive   = build_portfolio("Aggressive",   PORTFOLIO_WEIGHTS["Aggressive"],   components)
     moderate     = build_portfolio("Moderate",     PORTFOLIO_WEIGHTS["Moderate"],     components)
     conservative = build_portfolio("Conservative", PORTFOLIO_WEIGHTS["Conservative"], components)
+
+    # Simple 3-ETF blend (USD). build_portfolio redistributes weight while
+    # SCHD's proxy (VYM) is missing pre-2006-11, so the blend is well-defined
+    # back to QQQ's 1999 start.
+    etf_components = pd.DataFrame({
+        "VOO_USD":  voo_usd,
+        "VGT_USD":  vgt_usd,
+        "SCHD_USD": schd_usd,
+    }).sort_index()
+    simple_etf = build_portfolio("Simple_ETF_USD", SIMPLE_ETF_WEIGHTS, etf_components)
     print("  Done.")
 
     print("\nAssembling final DataFrame:")
@@ -535,6 +620,11 @@ def main() -> None:
         "Aggressive":           aggressive,
         "Moderate":             moderate,
         "Conservative":         conservative,
+        # Simple ETF sleeve — USD, NOT FX-adjusted to CAD (US-market illustration)
+        "VOO_USD":              voo_usd,
+        "VGT_USD":              vgt_usd,
+        "SCHD_USD":             schd_usd,
+        "Simple_ETF_USD":       simple_etf,
         "USD_CAD":              usdcad,
         "Prime_CA":             prime_ca,
         "Prime_US":             prime_us,
@@ -552,6 +642,12 @@ def main() -> None:
     print("End-of-history growth of $1,000 CAD:")
     for col, val in summary.items():
         print(f"  {col:<25} ${val:>12,.0f}")
+
+    etf_summary = out[["VOO_USD", "VGT_USD", "SCHD_USD", "Simple_ETF_USD"]].iloc[-1]
+    print("\nEnd-of-history growth of $1,000 USD (ETF sleeve, rebased at first valid date):")
+    for col, val in etf_summary.items():
+        first = out[col].first_valid_index().strftime("%Y-%m")
+        print(f"  {col:<18} ${val:>12,.0f}   (from {first})")
 
 
 if __name__ == "__main__":

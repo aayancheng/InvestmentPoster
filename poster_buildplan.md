@@ -122,6 +122,16 @@ Low priority. Only attempt if v0.1–v0.4 have stabilized.
 - **Splice provenance lives in code.** Every spliced series in `build_history.py` has a comment naming the sources and the splice date.
 - **Don't reach for D3 or React.** If a Plotly limitation feels worth switching stacks for, write it in the "Open questions" section below first and revisit at v1 retro.
 
+## Schema migrations
+
+- **2026-06 — Added USD ETF sleeve.** Four new columns appended to `monthly_returns.parquet`:
+  `VOO_USD`, `VGT_USD`, `SCHD_USD`, `Simple_ETF_USD`. These are growth-of-$1000 in **USD**
+  (NOT FX-adjusted to CAD — they back the "Power of a simple ETF portfolio" panel, a
+  deliberately US-market illustration). All other growth columns remain CAD. Any consumer
+  computing cross-series comparisons must not mix `_USD` columns with the CAD columns without
+  converting. Splice provenance: VOO←Shiller S&P 500 TR (1956), VGT←QQQ (1999), SCHD←VYM (2006);
+  blend weights in `SIMPLE_ETF_WEIGHTS` (`scripts/build_history.py`). Rendered by `app/chart_etf.py`.
+
 ## Open questions
 
 These need answers before or during the build — don't block on them, but flag them.

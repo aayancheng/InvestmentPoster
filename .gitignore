@@ -17,7 +17,9 @@ data/raw/
 data/*.parquet
 
 # Streamlit
-.streamlit/
+.streamlit/*
+!.streamlit/
+!.streamlit/config.toml
 
 # Testing
 .pytest_cache/
@@ -33,3 +35,6 @@ htmlcov/
 
 # Brainstorming / superpowers
 .superpowers/
+
+# Claude Code local settings / worktrees (machine-specific)
+.claude/

@@ -1,12 +1,12 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 # InvestmentPortfolio — Project Context
 
 ## Purpose
 
-A personal, rules-based ETF portfolio operating system. Not a trading algorithm — a disciplined routine that keeps the user exposed to broad markets with risk-appropriate allocation between growth and income ETFs, with Claude in the loop for the judgment moments.
+A personal, rules-based ETF portfolio operating system. Not a trading algorithm — a disciplined routine that keeps the user exposed to broad markets with risk-appropriate allocation between growth and income ETFs, with Codex in the loop for the judgment moments.
 
 Eventual end state: a small tool (Streamlit first, then web app) that other retail investors can use to design and operate their own portfolio.
 
@@ -26,8 +26,6 @@ YanCheng (aayancheng@gmail.com). Background in credit risk analytics / financial
 3. Income (e.g., SCHD, VYM, JEPI/JEPQ, VIG)
 4. Defensive (e.g., BND, SGOV, TIPS)
 
-The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart: Core = VOO, Growth = VGT, Income = SCHD, plus a blended "Simple 3-ETF Portfolio" (see "Power of a simple ETF portfolio" panel below).
-
 **Allocation rules.**
 - Profile inputs: age, horizon, account type, income stability, stated risk score, behavioral questions (especially "what did you do in March 2020?").
 - Growth-% anchor: roughly 110-minus-age, modified by risk score. Within growth: core / AI-tilt split based on concentration tolerance. Within non-growth: income / defensive split based on yield-now vs. stability-now preference.
@@ -38,7 +36,7 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 - Threshold rebalance: trigger trade tickets when any sleeve drifts >5% absolute or >20% relative from target.
 - System produces trade tickets — user executes trades manually in their broker.
 
-**Claude-in-the-loop responsibilities.**
+**Codex-in-the-loop responsibilities.**
 - Risk-profiling conversation (probes behavioral, not just stated).
 - Drawdown coaching at >15% portfolio drawdown — surfaces the user's pre-committed rules.
 - Education on demand (e.g., explain JEPI covered-call mechanics).
@@ -68,7 +66,6 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 - **localStorage fix.** On load, a zero-height `streamlit.components.v1.html` component injects JS that clears Streamlit's cached sidebar key from `window.parent.localStorage`, so `initial_sidebar_state="expanded"` always wins — no manual DevTools step needed.
 - **All controls live in the sidebar:** start-year slider, then per-series checkboxes. Each row uses `st.columns([5, 1])` — checkbox in the wide column, 3px colour swatch in the narrow column, inline to the right of the label.
 - **Main area:** title, subtitle, Plotly chart, methodology expander. No controls.
-- **"Power of a simple ETF portfolio" panel** (below the main chart): a second, USD-denominated log-scale chart from `app/chart_etf.py` showing VOO (Core), VGT (Growth), SCHD (Income), and a blended 50/25/25 "Simple 3-ETF Portfolio". Each ETF is proxy-backfilled (VOO←Shiller S&P 500 to 1956, VGT←QQQ to 1999, SCHD←VYM to 2006); default rebase 2006-11. Lives in `*_USD` parquet columns — NOT FX-adjusted to CAD. Blend weights are `SIMPLE_ETF_WEIGHTS` in `scripts/build_history.py`.
 
 **Run the app:**
 ```bash
@@ -83,7 +80,7 @@ A reproduction of the *Investments Illustrated* "2025 The Big Picture" poster �
 
 Lives inside this project — not a separate repo — because it shares the historical-returns data pipeline with the allocation engine backtests. The same `data/monthly_returns.parquet` powers both.
 
-**Stack (locked):** Streamlit + Plotly + pandas, built in Claude Code. Same stack as the rest of the project.
+**Stack (locked):** Streamlit + Plotly + pandas, built in Codex. Same stack as the rest of the project.
 
 **Data window (locked):** 1956–2025 from free sources. Pre-1956 Canadian stocks requires paid CRSP-Canada data and is out of scope for v1.
 
@@ -102,7 +99,7 @@ See `poster_buildplan.md` for the phased build plan, file layout, data-source sp
 
 ## UX principles
 
-The tool should make it **harder, not easier**, to do impulsive things in volatile markets. Default to inaction. Confirmation delays on destructive actions. Required Claude check-in before any trade >10% of portfolio. This is the opposite of most fintech and must be preserved through every iteration.
+The tool should make it **harder, not easier**, to do impulsive things in volatile markets. Default to inaction. Confirmation delays on destructive actions. Required Codex check-in before any trade >10% of portfolio. This is the opposite of most fintech and must be preserved through every iteration.
 
 ## Working conventions
 
@@ -144,7 +141,6 @@ scripts/build_history.py
   └── splices into data/monthly_returns.parquet   ← canonical, shared contract
         │
         ├── app/chart_main.py          (poster main panel, 4-row Plotly figure)
-        ├── app/chart_etf.py           (USD ETF comparison panel: VOO/VGT/SCHD + blend)
         ├── app/chart_insets.py        (3 inset figures)
         ├── app/annotations.py         (event label helpers, reads data/events.json)
         ├── app/big_picture.py         (Streamlit page, @st.cache_data wrapper)
@@ -157,7 +153,7 @@ data/events.json          ← annotation positions — edit JSON, not figure bui
 data/drawdowns.json       ← computed drawdown rectangles for row 1 of poster
 ```
 
-Key invariant: `monthly_returns.parquet` has a monthly DatetimeIndex and one named column per series. Both the poster and the allocation engine read it — any schema change requires a migration note in `poster_buildplan.md`. Columns suffixed `_USD` (VOO_USD, VGT_USD, SCHD_USD, Simple_ETF_USD) are kept in USD and must NOT be passed through `to_cad()`; all other growth series are CAD.
+Key invariant: `monthly_returns.parquet` has a monthly DatetimeIndex and one named column per series. Both the poster and the allocation engine read it — any schema change requires a migration note in `poster_buildplan.md`.
 
 ## What to do at session start
 

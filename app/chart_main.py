@@ -252,21 +252,10 @@ def build_figure(
     # ── Global layout ─────────────────────────────────────────────────────────
     fig.update_layout(
         height=860,
-        margin=dict(l=60, r=210, t=20, b=40),
+        margin=dict(l=60, r=80, t=20, b=40),
         hovermode="x unified",
-        showlegend=True,
-        legend=dict(
-            x=1.01,
-            y=0.98,
-            xanchor="left",
-            yanchor="top",
-            bgcolor="rgba(255,255,255,0.92)",
-            bordercolor="#CCCCCC",
-            borderwidth=1,
-            font=dict(size=10, color="#111111"),
-            tracegroupgap=2,
-        ),
-        plot_bgcolor="#FAFAFA",
+        showlegend=False,
+        plot_bgcolor="#FFFFFF",
         paper_bgcolor="#FFFFFF",
     )
 

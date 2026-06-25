@@ -16,7 +16,9 @@ MAIN_SERIES = [
     "Aggressive", "Moderate", "Conservative",
 ]
 SUPPLEMENTARY = ["USD_CAD", "Prime_CA", "Prime_US"]
-ALL_COLS = MAIN_SERIES + SUPPLEMENTARY
+# Simple ETF sleeve — USD growth-of-$1000, proxy-backfilled (not CAD-converted).
+ETF_SERIES = ["VOO_USD", "VGT_USD", "SCHD_USD", "Simple_ETF_USD"]
+ALL_COLS = MAIN_SERIES + SUPPLEMENTARY + ETF_SERIES
 
 
 @pytest.fixture(scope="module")
@@ -113,3 +115,63 @@ def test_prime_rates_are_percentages(df):
     for col in ["Prime_CA", "Prime_US"]:
         valid = df[col].dropna()
         assert valid.between(0, 30).all(), f"{col} has out-of-range values: {valid.describe()}"
+
+
+# ── Simple ETF sleeve (USD) ──────────────────────────────────────────────────
+
+def test_etf_series_start_at_1000(df):
+    """Each ETF/blend series rebases to ~1000 at its first valid date."""
+    for col in ETF_SERIES:
+        first_valid = df[col].dropna().iloc[0]
+        assert abs(first_valid - 1000.0) < 1.0, (
+            f"{col} first non-NaN value is {first_valid:.2f}, expected ~1000"
+        )
+
+
+def test_etf_series_are_positive(df):
+    for col in ETF_SERIES:
+        valid = df[col].dropna()
+        assert (valid > 0).all(), f"{col} has non-positive values"
+
+
+def test_etf_backfill_start_dates(df):
+    """Proxy splices extend each ETF back to its proxy's start.
+
+    VOO ← Shiller S&P 500 (1956), VGT ← QQQ (1999), SCHD ← VYM (2006).
+    The blend starts wherever its earliest component (VOO) starts.
+    """
+    assert df["VOO_USD"].first_valid_index().year <= 1956, "VOO should backfill to 1956"
+    assert df["VGT_USD"].first_valid_index().year <= 2000, "VGT should backfill to ~1999 via QQQ"
+    schd_start = df["SCHD_USD"].first_valid_index()
+    assert schd_start.year <= 2007, f"SCHD should backfill to ~2006 via VYM, got {schd_start}"
+    assert df["Simple_ETF_USD"].first_valid_index().year <= 1956
+
+
+def test_voo_is_usd_not_cad(df):
+    """VOO is the S&P 500 in USD; US_Stocks is the same index FX-adjusted to CAD.
+
+    CAD weakened vs USD over the period, so the CAD line ends higher than the
+    USD line. This guards against accidentally routing VOO through to_cad().
+    """
+    end = df.loc["2025-12-31"]
+    assert end["VOO_USD"] < end["US_Stocks"], (
+        "VOO_USD (USD) should end below US_Stocks (CAD); did it get FX-converted?"
+    )
+    # Sanity: VOO in USD should still be a large multiple of the $1000 base.
+    assert 100_000 < end["VOO_USD"] < 1_500_000, f"VOO_USD = {end['VOO_USD']:.0f}"
+
+
+def test_simple_etf_blend_between_components(df):
+    """The blend's terminal value lies between the weakest and strongest sleeve.
+
+    Compared over the common window where all three components exist (SCHD's
+    proxy start, ~2006-11), each series rebased to that date.
+    """
+    common = df[["VOO_USD", "VGT_USD", "SCHD_USD", "Simple_ETF_USD"]].dropna()
+    rebased = common / common.iloc[0] * 1000
+    end = rebased.iloc[-1]
+    lo = min(end["VOO_USD"], end["VGT_USD"], end["SCHD_USD"])
+    hi = max(end["VOO_USD"], end["VGT_USD"], end["SCHD_USD"])
+    assert lo <= end["Simple_ETF_USD"] <= hi, (
+        f"Blend {end['Simple_ETF_USD']:.0f} outside component range [{lo:.0f}, {hi:.0f}]"
+    )
