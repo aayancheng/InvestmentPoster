@@ -60,14 +60,15 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 4. **Stress test as real user.** Run on a hypothetical portfolio, refine awkward parts.
 5. **(Optional) Web app.** Next.js + FastAPI + SQLite. Multi-user. No brokerage integration.
 
-## Current UI state — Big Picture v0.1.1
+## Current UI state — Big Picture v0.2 (dashboard + analytics + ETF panel)
 
-`app/big_picture.py` uses a static sidebar layout. Branch: `feature/dashboard-redesign` (PR #1 open).
+`app/big_picture.py` is a dark-shell Streamlit dashboard. Current work lives on branch `codex/betteranalytics` (the `main` and `feature/dashboard-redesign` branches are older).
 
-- **Sidebar always open, non-collapsible.** `initial_sidebar_state="expanded"` + CSS hides `[data-testid="stSidebarHeader"]` (the collapse arrow) and `[data-testid="stHeader"]` (the top bar that holds Deploy + hamburger).
-- **localStorage fix.** On load, a zero-height `streamlit.components.v1.html` component injects JS that clears Streamlit's cached sidebar key from `window.parent.localStorage`, so `initial_sidebar_state="expanded"` always wins — no manual DevTools step needed.
-- **All controls live in the sidebar:** start-year slider, then per-series checkboxes. Each row uses `st.columns([5, 1])` — checkbox in the wide column, 3px colour swatch in the narrow column, inline to the right of the label.
-- **Main area:** title, subtitle, Plotly chart, methodology expander. No controls.
+- **Dark shell.** `.streamlit/config.toml` sets `base = "dark"`, `backgroundColor = "#0a0a0a"`. Custom CSS (`.ip-*` classes) styles a brand header, sidebar nav, and KPI cards.
+- **Sidebar always open, non-collapsible.** `initial_sidebar_state="expanded"` + CSS hides `[data-testid="stSidebarHeader"]` (the collapse arrow) and `[data-testid="stHeader"]` (the top bar that holds Deploy + hamburger). A zero-height `streamlit.components.v1.html` component injects JS on load that clears Streamlit's cached sidebar key from `window.parent.localStorage`, so `initial_sidebar_state="expanded"` always wins.
+- **Sidebar contents:** brand header, nav (active "The Big Picture" + 3 coming-soon items: Portfolio Analyzer, Risk Profiler, Trade Tickets), start-year slider, then per-series checkboxes with inline 3px colour swatches (`st.columns([5, 1])`).
+- **Main area:** title + subtitle, a row of KPI cards (end value, CAGR, max drawdown, annualised vol, worst rolling 12m, longest drawdown, doubling time, time window), a "Long-term investing lens" narrative, a "Risk tolerance check" expander (the risk-profiler conversation), the main Plotly chart, a methodology expander, then the ETF panel.
+- **Analytics** (`app/analytics.py`): `compute_dashboard_metrics()` derives CAGR, volatility, max/longest drawdown, worst rolling 12-month return, and doubling time from the growth-index series; `classify_risk_profile()` powers the risk-tolerance check. Tested in `tests/test_analytics.py`.
 - **"Power of a simple ETF portfolio" panel** (below the main chart): a second, USD-denominated log-scale chart from `app/chart_etf.py` showing VOO (Core), VGT (Growth), SCHD (Income), and a blended 50/25/25 "Simple 3-ETF Portfolio". Each ETF is proxy-backfilled (VOO←Shiller S&P 500 to 1956, VGT←QQQ to 1999, SCHD←VYM to 2006); default rebase 2006-11. Lives in `*_USD` parquet columns — NOT FX-adjusted to CAD. Blend weights are `SIMPLE_ETF_WEIGHTS` in `scripts/build_history.py`.
 
 **Run the app:**
@@ -75,7 +76,9 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 export $(cat .env | xargs) && .venv/bin/streamlit run app/big_picture.py --server.port 8502
 ```
 
-**Next planned step — v0.2 dashboard redesign:** dark shell (`#0a0a0a`) around a white chart, sidebar nav with coming-soon items, KPI cards (end value, CAGR, max drawdown, time window). Design spec at `docs/superpowers/specs/2026-05-14-big-picture-dashboard-redesign-design.md`.
+**Known open item — event annotations** (`app/annotations.py`): events render as subtle vertical tick marks at the top/bottom edges of row 2 with hover-only labels (no inline text). The paper-coordinate bounds (`_ROW2_BOTTOM`/`_ROW2_TOP`) are hand-tuned to the `make_subplots` `row_heights` and must be kept in sync if those change.
+
+**Candidate next steps:** allocation engine notebook (Build stage 1); optional ETF-panel start-date slider; refine annotation tick density. The v0.2 dashboard design spec is at `docs/superpowers/specs/2026-05-14-big-picture-dashboard-redesign-design.md`.
 
 ## Parallel track: The Big Picture poster
 
@@ -145,10 +148,12 @@ scripts/build_history.py
         │
         ├── app/chart_main.py          (poster main panel, 4-row Plotly figure)
         ├── app/chart_etf.py           (USD ETF comparison panel: VOO/VGT/SCHD + blend)
-        ├── app/chart_insets.py        (3 inset figures)
-        ├── app/annotations.py         (event label helpers, reads data/events.json)
+        ├── app/annotations.py         (event tick marks + hover, reads data/events.json)
+        ├── app/analytics.py           (dashboard metrics + risk-profile classifier)
         ├── app/big_picture.py         (Streamlit page, @st.cache_data wrapper)
-        └── allocation engine notebook (backtest uses same parquet)
+        └── allocation engine notebook (backtest uses same parquet, planned)
+
+        (app/chart_insets.py — 3 inset figures — is a planned v0.3 item, not yet built)
 
 scripts/compute_drawdowns.py
   └── reads monthly_returns.parquet → writes data/drawdowns.json
