@@ -60,25 +60,24 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 4. **Stress test as real user.** Run on a hypothetical portfolio, refine awkward parts.
 5. **(Optional) Web app.** Next.js + FastAPI + SQLite. Multi-user. No brokerage integration.
 
-## Current UI state — Big Picture v0.2 (dashboard + analytics + ETF panel)
+## Current UI state — Big Picture v0.3 (dark USD redesign)
 
-`app/big_picture.py` is a dark-shell Streamlit dashboard. Current work lives on branch `codex/betteranalytics` (the `main` and `feature/dashboard-redesign` branches are older).
+`app/big_picture.py` is a simplified, dark, **USD** dashboard. Current work lives on branch `codex/betteranalytics` (the `main` and `feature/dashboard-redesign` branches are older). Design spec: `docs/superpowers/specs/2026-06-25-big-picture-v0.3-redesign-design.md`; plan: `docs/superpowers/plans/2026-06-25-big-picture-v0.3-redesign.md`.
 
-- **Dark shell.** `.streamlit/config.toml` sets `base = "dark"`, `backgroundColor = "#0a0a0a"`. Custom CSS (`.ip-*` classes) styles a brand header, sidebar nav, and KPI cards.
-- **Sidebar always open, non-collapsible.** `initial_sidebar_state="expanded"` + CSS hides `[data-testid="stSidebarHeader"]` (the collapse arrow) and `[data-testid="stHeader"]` (the top bar that holds Deploy + hamburger). A zero-height `streamlit.components.v1.html` component injects JS on load that clears Streamlit's cached sidebar key from `window.parent.localStorage`, so `initial_sidebar_state="expanded"` always wins.
-- **Sidebar contents:** brand header, nav (active "The Big Picture" + 3 coming-soon items: Portfolio Analyzer, Risk Profiler, Trade Tickets), start-year slider, then per-series checkboxes with inline 3px colour swatches (`st.columns([5, 1])`).
-- **Main area:** title + subtitle, a row of KPI cards (end value, CAGR, max drawdown, annualised vol, worst rolling 12m, longest drawdown, doubling time, time window), a "Long-term investing lens" narrative, a "Risk tolerance check" expander (the risk-profiler conversation), the main Plotly chart, a methodology expander, then the ETF panel.
-- **Analytics** (`app/analytics.py`): `compute_dashboard_metrics()` derives CAGR, volatility, max/longest drawdown, worst rolling 12-month return, and doubling time from the growth-index series; `classify_risk_profile()` powers the risk-tolerance check. Tested in `tests/test_analytics.py`.
-- **"Power of a simple ETF portfolio" panel** (below the main chart): a second, USD-denominated log-scale chart from `app/chart_etf.py` showing VOO (Core), VGT (Growth), SCHD (Income), and a blended 50/25/25 "Simple 3-ETF Portfolio". Each ETF is proxy-backfilled (VOO←Shiller S&P 500 to 1956, VGT←QQQ to 1999, SCHD←VYM to 2006); default rebase 2006-11. Lives in `*_USD` parquet columns — NOT FX-adjusted to CAD. Blend weights are `SIMPLE_ETF_WEIGHTS` in `scripts/build_history.py`.
+- **Dark, flush charts.** Both Plotly figures use `paper_bgcolor`/`plot_bgcolor = "rgba(0,0,0,0)"` so they sit flush on the `#0a0a0a` shell (`.streamlit/config.toml` `base="dark"`). The old white-panel-on-dark clash is gone.
+- **No sidebar, no nav, no KPI cards.** CSS hides `[data-testid="stSidebar"]` and the Streamlit header. The previous sidebar/localStorage hack, the `.ip-card*` grid, and the risk-tolerance check are all removed.
+- **Landing (above the fold):** title top-left; one row with a slim **stat strip** (End value · Per year · Worst drop · To double) on the left and the **start-year slider** right-aligned; a full-width 2-row `app/chart_landing.py` figure (log USD growth + underwater drawdown strip); a plain-language headline; a scroll cue. Metrics are window-scoped (`calculate_series_metrics` on `US_Stocks_USD.loc[start_year:]`) and the headline end value uses `growth_multiple*1000` so it matches the chart's rebase.
+- **Four core series (all US, USD):** `US_Stocks_USD` (S&P 500 TR), `US_Bonds_USD` (FRED GS10, constructed TR), `US_TBills_USD` (FRED TB3MS), `US_Inflation_USD` (FRED CPIAUCSL). Built in `scripts/build_history.py` via `_bond_tr_from_yield` + `load_us_*` loaders; NOT passed through `to_cad()`.
+- **Scroll-down ETF section:** `build_allocation_donut()` (50/25/25 VOO/VGT/SCHD) + ticker legend on the left, dark-themed `build_etf_panel()` growth chart on the right, takeaway line. Both in `app/chart_etf.py`.
+- **Analytics** (`app/analytics.py`): `calculate_series_metrics(series, key)` powers the stat strip. `compute_dashboard_metrics()` / `classify_risk_profile()` remain in the module but are no longer wired into the page.
+- **Retired from the page (kept in repo):** `app/chart_main.py` (the 4-row CAD poster — `chart_landing.py` imports its `_rebase`/`_annualised_return` helpers) and `app/annotations.py` (event ticks). The USD/CAD FX row, inflation/prime band, Canadian series, and 3 portfolios are no longer plotted.
 
 **Run the app:**
 ```bash
 export $(cat .env | xargs) && .venv/bin/streamlit run app/big_picture.py --server.port 8502
 ```
 
-**Known open item — event annotations** (`app/annotations.py`): events render as subtle vertical tick marks at the top/bottom edges of row 2 with hover-only labels (no inline text). The paper-coordinate bounds (`_ROW2_BOTTOM`/`_ROW2_TOP`) are hand-tuned to the `make_subplots` `row_heights` and must be kept in sync if those change.
-
-**Candidate next steps:** allocation engine notebook (Build stage 1); optional ETF-panel start-date slider; refine annotation tick density. The v0.2 dashboard design spec is at `docs/superpowers/specs/2026-05-14-big-picture-dashboard-redesign-design.md`.
+**Candidate next steps:** allocation engine notebook (Build stage 1); optional ETF-panel start-date slider; the three inset panels (v0.3 of the poster track). The CAD poster (`chart_main.py`) can be reintroduced as a separate view if desired.
 
 ## Parallel track: The Big Picture poster
 
@@ -146,8 +145,9 @@ scripts/build_history.py
   └── pulls raw sources → data/raw/
   └── splices into data/monthly_returns.parquet   ← canonical, shared contract
         │
-        ├── app/chart_main.py          (poster main panel, 4-row Plotly figure)
-        ├── app/chart_etf.py           (USD ETF comparison panel: VOO/VGT/SCHD + blend)
+        ├── app/chart_landing.py       (v0.3 dark USD landing: 4 US core series + drawdown strip)
+        ├── app/chart_main.py          (legacy 4-row CAD poster — retired from page, helpers reused)
+        ├── app/chart_etf.py           (USD ETF panel + allocation donut: VOO/VGT/SCHD + blend)
         ├── app/annotations.py         (event tick marks + hover, reads data/events.json)
         ├── app/analytics.py           (dashboard metrics + risk-profile classifier)
         ├── app/big_picture.py         (Streamlit page, @st.cache_data wrapper)
@@ -162,7 +162,7 @@ data/events.json          ← annotation positions — edit JSON, not figure bui
 data/drawdowns.json       ← computed drawdown rectangles for row 1 of poster
 ```
 
-Key invariant: `monthly_returns.parquet` has a monthly DatetimeIndex and one named column per series. Both the poster and the allocation engine read it — any schema change requires a migration note in `poster_buildplan.md`. Columns suffixed `_USD` (VOO_USD, VGT_USD, SCHD_USD, Simple_ETF_USD) are kept in USD and must NOT be passed through `to_cad()`; all other growth series are CAD.
+Key invariant: `monthly_returns.parquet` has a monthly DatetimeIndex and one named column per series. Both the poster and the allocation engine read it — any schema change requires a migration note in `poster_buildplan.md`. Columns suffixed `_USD` are kept in USD and must NOT be passed through `to_cad()`; all other growth series are CAD. USD columns: the ETF sleeve (`VOO_USD, VGT_USD, SCHD_USD, Simple_ETF_USD`) and the v0.3 US core sleeve (`US_Stocks_USD, US_Bonds_USD, US_TBills_USD, US_Inflation_USD`).
 
 ## What to do at session start
 
