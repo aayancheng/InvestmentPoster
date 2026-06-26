@@ -37,6 +37,15 @@ _TICK_VALS = [1_000, 3_000, 10_000, 30_000, 100_000, 300_000, 1_000_000]
 _TICK_TEXT = [f"${v:,.0f}" for v in _TICK_VALS]
 
 
+def _compact_money(v: float) -> str:
+    """1077932 -> $1.08M, 38394 -> $38k, 950 -> $950."""
+    if v >= 1_000_000:
+        return f"${v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"${v/1_000:.0f}k"
+    return f"${v:,.0f}"
+
+
 def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
     """Build the 2-row dark USD landing figure."""
     panel = df.loc[f"{start_year}-01-01":]
@@ -56,9 +65,9 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
         colour = LANDING_COLOURS[col]
         name = LANDING_NAMES[col]
         if col == "US_Stocks_USD":
-            label = f"  {name} · ${s.iloc[-1]:,.0f} · {cagr*100:.1f}%/yr"
+            label = f"  {name} · {_compact_money(s.iloc[-1])} · {cagr*100:.0f}%/yr"
         else:
-            label = f"  {name} · ${s.iloc[-1]:,.0f}"
+            label = f"  {name} · {_compact_money(s.iloc[-1])}"
         fig.add_trace(
             go.Scatter(
                 x=s.index, y=s.values, name=name, mode="lines+text",
@@ -66,6 +75,7 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
                 text=[""] * (len(s) - 1) + [label],
                 textposition="middle right",
                 textfont=dict(size=9, color=colour),
+                cliponaxis=False,
                 hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}}<br>$%{{y:,.0f}}<extra></extra>",
             ),
             row=1, col=1,
@@ -104,7 +114,7 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
     )
     fig.update_layout(
         height=560,
-        margin=dict(l=54, r=170, t=10, b=30),
+        margin=dict(l=54, r=220, t=10, b=30),
         hovermode="x unified",
         showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)",

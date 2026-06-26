@@ -113,7 +113,7 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
     )
     fig.update_layout(
         height=460,
-        margin=dict(l=60, r=180, t=20, b=40),
+        margin=dict(l=60, r=210, t=20, b=40),
         hovermode="x unified",
         showlegend=True,
         legend=dict(
