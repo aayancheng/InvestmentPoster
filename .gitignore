@@ -12,9 +12,11 @@ build/
 .env
 *.env.local
 
-# Data — raw downloads and large binary files
+# Data — raw downloads (large); the canonical parquet IS committed so the
+# deployed app can read it without rebuilding (see exception below).
 data/raw/
 data/*.parquet
+!data/monthly_returns.parquet
 
 # Streamlit
 .streamlit/*

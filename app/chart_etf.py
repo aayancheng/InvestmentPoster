@@ -29,7 +29,7 @@ ETF_SERIES_ORDER = [
 ]
 
 ETF_COLOURS = {
-    "Simple_ETF_USD": "#111111",   # near-black — the headline line
+    "Simple_ETF_USD": "#f2f2f2",   # near-white — the headline line (reads on dark)
     "VOO_USD":        "#2E86C1",   # blue   — core
     "VGT_USD":        "#E67E22",   # orange — growth
     "SCHD_USD":       "#27AE60",   # green  — income
@@ -88,6 +88,7 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
                 text=[""] * (len(s) - 1) + [label],
                 textposition="middle right",
                 textfont=dict(size=8, color=colour),
+                cliponaxis=False,
                 hovertemplate=(
                     f"<b>{ETF_DISPLAY_NAMES.get(col, col)}</b><br>"
                     "%{x|%b %Y}<br>"
@@ -101,29 +102,53 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
         tickmode="array",
         tickvals=_TICK_VALS,
         ticktext=_TICK_TEXT,
-        tickfont=dict(color="#111111", size=10),
-        gridcolor="#E0E0E0",
+        tickfont=dict(color="#9a9a9a", size=10),
+        gridcolor="#1c1c1c",
     )
     fig.update_xaxes(
         showgrid=True,
-        gridcolor="#E0E0E0",
+        gridcolor="#1c1c1c",
         tickformat="%Y",
         dtick="M24",
-        tickfont=dict(color="#111111", size=11),
+        tickfont=dict(color="#9a9a9a", size=11),
     )
     fig.update_layout(
         height=460,
-        margin=dict(l=60, r=180, t=20, b=40),
+        margin=dict(l=54, r=160, t=20, b=40),
         hovermode="x unified",
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom", y=1.0,
             xanchor="left", x=0.0,
-            font=dict(size=10, color="#111111"),
+            font=dict(size=10, color="#cfcfcf"),
         ),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
     )
 
+    return fig
+
+
+def build_allocation_donut() -> go.Figure:
+    """Donut of the 50/25/25 VOO/VGT/SCHD recommended mix, dark/transparent."""
+    labels = ["VOO", "VGT", "SCHD"]
+    values = [50, 25, 25]
+    colours = [ETF_COLOURS["VOO_USD"], ETF_COLOURS["VGT_USD"], ETF_COLOURS["SCHD_USD"]]
+
+    fig = go.Figure(
+        go.Pie(
+            labels=labels, values=values, hole=0.62,
+            marker=dict(colors=colours, line=dict(color="#0a0a0a", width=2)),
+            textinfo="label+percent", textfont=dict(color="#ffffff", size=12),
+            sort=False, direction="clockwise", showlegend=False,
+            hovertemplate="%{label} · %{value}%<extra></extra>",
+        )
+    )
+    fig.add_annotation(text="3 ETFs", showarrow=False,
+                       font=dict(color="#ffffff", size=15, family="sans-serif"))
+    fig.update_layout(
+        height=240, margin=dict(l=8, r=8, t=8, b=8),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    )
     return fig

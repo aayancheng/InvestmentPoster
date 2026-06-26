@@ -359,25 +359,53 @@ def load_schd() -> pd.Series:
     return _splice_etf(vym, schd, "SCHD_USD")
 
 
-def load_cdn_bond_tr() -> pd.Series:
-    """Canadian 10-year government bond total-return index in CAD.
+def load_us_bonds_usd() -> pd.Series:
+    """US 10-year Treasury total-return index in USD.
 
-    Constructed from FRED IRLTLT01CAM156N (10-year yield, % p.a.) using:
-      monthly TR ≈ yield/12  −  duration × Δyield
-
-    Constant modified duration = 8.0 years (known approximation; acceptable
-    at log scale — noted in chart methodology expander).
+    FRED GS10 (10-Year Treasury Constant Maturity, % p.a., monthly), duration 8.0y.
     """
-    y = _fred("IRLTLT01CAM156N").loc[START:] / 100
-    duration = 8.0
+    return _bond_tr_from_yield(_fred("GS10"), 8.0, "US_Bonds_USD")
 
+
+def load_us_tbills_usd() -> pd.Series:
+    """US 3-month T-bill total-return index in USD.
+
+    FRED TB3MS (3-Month Treasury Bill, Secondary Market Rate, % p.a., monthly).
+    Monthly TR = rate/12.
+    """
+    rates = _fred("TB3MS").loc[START:] / 100
+    return _ret_to_level(rates / 12).rename("US_TBills_USD")
+
+
+def load_us_inflation_usd() -> pd.Series:
+    """US CPI rebased to $1000 at START. FRED CPIAUCSL (CPI-U, index, monthly)."""
+    cpi = _fred("CPIAUCSL").loc[START:]
+    full_idx = pd.date_range(cpi.index[0], pd.Timestamp(END) + pd.offsets.MonthEnd(0), freq="ME")
+    cpi = cpi.reindex(full_idx).ffill()
+    return (cpi / cpi.iloc[0] * 1000).rename("US_Inflation_USD")
+
+
+def _bond_tr_from_yield(yield_pct: pd.Series, duration: float, name: str) -> pd.Series:
+    """Constant-duration total-return index from a constant-maturity yield series.
+
+    monthly TR ≈ yield/12  −  duration × Δyield   (ignores convexity; OK at log scale)
+    Returns growth-of-$1000, rebased to 1000 at the first observation.
+    """
+    y = yield_pct.loc[START:] / 100
     rets = pd.Series(0.0, index=y.index)
     for i in range(1, len(y)):
         coupon    = y.iloc[i - 1] / 12
         price_chg = -duration * (y.iloc[i] - y.iloc[i - 1])
         rets.iloc[i] = coupon + price_chg
+    return _ret_to_level(rets).rename(name)
 
-    return _ret_to_level(rets).rename("Bonds")
+
+def load_cdn_bond_tr() -> pd.Series:
+    """Canadian 10-year government bond total-return index in CAD.
+
+    FRED IRLTLT01CAM156N (10-year yield, % p.a.), constant modified duration 8.0y.
+    """
+    return _bond_tr_from_yield(_fred("IRLTLT01CAM156N"), 8.0, "Bonds")
 
 
 def load_tbills() -> pd.Series:
@@ -579,6 +607,11 @@ def main() -> None:
     vgt_usd  = load_vgt()
     schd_usd = load_schd()
 
+    print("\nLoading US core sleeve (USD, FRED):")
+    us_bonds_usd     = load_us_bonds_usd()
+    us_tbills_usd    = load_us_tbills_usd()
+    us_inflation_usd = load_us_inflation_usd()
+
     print("\nConverting USD series to CAD:")
     us_stocks   = to_cad(us_usd,       usdcad, "US_Stocks")
     intl_stocks = to_cad(eafe_usd,     usdcad, "International_Stocks")
@@ -625,6 +658,11 @@ def main() -> None:
         "VGT_USD":              vgt_usd,
         "SCHD_USD":             schd_usd,
         "Simple_ETF_USD":       simple_etf,
+        # US core sleeve — USD, NOT FX-adjusted to CAD
+        "US_Stocks_USD":        us_usd,
+        "US_Bonds_USD":         us_bonds_usd,
+        "US_TBills_USD":        us_tbills_usd,
+        "US_Inflation_USD":     us_inflation_usd,
         "USD_CAD":              usdcad,
         "Prime_CA":             prime_ca,
         "Prime_US":             prime_us,
@@ -648,6 +686,11 @@ def main() -> None:
     for col, val in etf_summary.items():
         first = out[col].first_valid_index().strftime("%Y-%m")
         print(f"  {col:<18} ${val:>12,.0f}   (from {first})")
+
+    us_summary = out[["US_Stocks_USD", "US_Bonds_USD", "US_TBills_USD", "US_Inflation_USD"]].iloc[-1]
+    print("\nEnd-of-history growth of $1,000 USD (US core sleeve):")
+    for col, val in us_summary.items():
+        print(f"  {col:<18} ${val:>12,.0f}")
 
 
 if __name__ == "__main__":
