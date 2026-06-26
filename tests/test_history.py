@@ -18,7 +18,8 @@ MAIN_SERIES = [
 SUPPLEMENTARY = ["USD_CAD", "Prime_CA", "Prime_US"]
 # Simple ETF sleeve — USD growth-of-$1000, proxy-backfilled (not CAD-converted).
 ETF_SERIES = ["VOO_USD", "VGT_USD", "SCHD_USD", "Simple_ETF_USD"]
-ALL_COLS = MAIN_SERIES + SUPPLEMENTARY + ETF_SERIES
+US_CORE_USD = ["US_Stocks_USD", "US_Bonds_USD", "US_TBills_USD", "US_Inflation_USD"]
+ALL_COLS = MAIN_SERIES + SUPPLEMENTARY + ETF_SERIES + US_CORE_USD
 
 
 @pytest.fixture(scope="module")
@@ -175,3 +176,31 @@ def test_simple_etf_blend_between_components(df):
     assert lo <= end["Simple_ETF_USD"] <= hi, (
         f"Blend {end['Simple_ETF_USD']:.0f} outside component range [{lo:.0f}, {hi:.0f}]"
     )
+
+
+# ── US core sleeve (USD) ──────────────────────────────────────────────────────
+
+def test_us_core_usd_start_at_1000(df):
+    for col in US_CORE_USD:
+        first_valid = df[col].dropna().iloc[0]
+        assert abs(first_valid - 1000.0) < 1.0, f"{col} starts at {first_valid:.2f}, expected ~1000"
+
+
+def test_us_core_usd_reach_1956(df):
+    for col in US_CORE_USD:
+        assert df[col].first_valid_index().year <= 1956, (
+            f"{col} starts {df[col].first_valid_index()}, expected <= 1956"
+        )
+
+
+def test_us_core_usd_positive(df):
+    for col in US_CORE_USD:
+        valid = df[col].dropna()
+        assert (valid > 0).all(), f"{col} has non-positive values"
+
+
+def test_us_stocks_usd_below_cad(df):
+    """US_Stocks_USD (USD) ends below US_Stocks (CAD) — CAD weakened vs USD.
+    Guards against accidentally routing the USD series through to_cad()."""
+    end = df.loc["2025-12-31"]
+    assert end["US_Stocks_USD"] < end["US_Stocks"], "US_Stocks_USD should be < US_Stocks (CAD)"
