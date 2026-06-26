@@ -98,6 +98,10 @@ cpi = window["US_Inflation_USD"].dropna()
 real_mult = m.growth_multiple / (cpi.iloc[-1] / cpi.iloc[0])
 
 rebased_end = m.growth_multiple * 1000   # $1,000 → this, matches the chart's rebase
+# Real (inflation-adjusted) annual return — frame-independent, avoids mixing
+# nominal vs. purchasing-power dollar amounts in the headline.
+_years = m.months / 12
+real_cagr = real_mult ** (1 / _years) - 1 if _years > 0 else 0.0
 
 with strip_col:
     dbl = f"{m.doubling_time_years:.1f} yrs" if m.doubling_time_years else "—"
@@ -117,9 +121,9 @@ st.plotly_chart(fig, use_container_width=True)
 st.markdown(
     "<div class='ip-headline'>"
     f"<b>$1,000 → ${rebased_end:,.0f}</b> in US stocks since {start_year} — about "
-    f"<b class='pos'>{m.cagr*100:.0f}% a year</b>, but you'd have ridden a "
-    f"<b class='neg'>{m.max_drawdown*100:.0f}% drop</b> along the way "
-    f"(${real_mult*1000:,.0f} after inflation)."
+    f"<b class='pos'>{m.cagr*100:.0f}% a year</b> "
+    f"(<b class='pos'>{real_cagr*100:.0f}% a year</b> after inflation), but you'd have ridden a "
+    f"<b class='neg'>{m.max_drawdown*100:.0f}% drop</b> along the way."
     "</div>",
     unsafe_allow_html=True,
 )
