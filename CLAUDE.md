@@ -77,7 +77,12 @@ The Big Picture poster now *illustrates* sleeves 1–3 with a live spliced chart
 export $(cat .env | xargs) && .venv/bin/streamlit run app/big_picture.py --server.port 8502
 ```
 
-**Candidate next steps:** allocation engine notebook (Build stage 1); optional ETF-panel start-date slider; the three inset panels (v0.3 of the poster track). The CAD poster (`chart_main.py`) can be reintroduced as a separate view if desired.
+**Next steps — beginner-focused, long-term-investing (v0.4 candidates):**
+1. **Monthly contribution simulator** — an "If I invest $X/month" input that overlays dollar-cost-averaged contributions on the US-stocks path (total contributed vs. ending value). Reframes the abstract $1,000 into the user's own plan. (Deferred "contribution math" option from the v0.3 brainstorm.)
+2. **Stay-invested drawdown coaching** — make the drawdown strip teach: hover shows "recovered by {year}, took {N} months"; a headline stat like "every major drop fully recovered — longest took {N} years"; optional "what if you sold at the bottom" comparison. Serves the project's behavioral-discipline goal (panic-selling resistance).
+3. **Real (inflation-adjusted) toggle** — switch the chart between nominal and real dollars, making the Inflation line the explicit "beat this" baseline. Teaches purchasing power over decades.
+
+**Other candidates:** allocation engine notebook (Build stage 1); optional ETF-panel start-date slider; the three inset panels (poster track). The CAD poster (`chart_main.py`) can be reintroduced as a separate view if desired. Full write-up of the three v0.4 ideas is in `docs/superpowers/specs/2026-06-25-big-picture-v0.3-redesign-design.md` ("Next steps" section).
 
 ## Parallel track: The Big Picture poster
 

@@ -101,3 +101,18 @@ All four span 1956–2025 (S&P is the binding start at 1956). Append the columns
 - **US bond TR approximation** — constant 8yr duration ignores convexity, identical caveat to the existing Canadian bond series; acceptable at log scale.
 - **Start-year vs data coverage** — all four US series reach 1956, so the slider range is unaffected; default stays 1961.
 - **Retiring `chart_main.py` from the page** leaves it unused; keep it imported only for the `_rebase`/`_annualised_return` helpers (or lift those into a tiny shared util if cleaner during implementation).
+
+## Next steps — beginner-focused, long-term-investing (v0.4 candidates)
+
+These build on v0.3 to help a first-time investor *internalise* long-horizon discipline rather than just read a chart. Each is self-contained and could be its own spec.
+
+1. **Monthly contribution simulator — "If I invest $X/month."**
+   Beginners save monthly, not in lump sums. Add an input (default ~$200/month) that overlays the growth of dollar-cost-averaged contributions on the US-stocks path, showing **total contributed vs. ending value** (and ideally the same for the 3-ETF blend). Reframes the abstract "$1,000 → $X" into the user's own plan and makes the compounding tangible. This is the "contribution math" option deferred during the v0.3 brainstorm. Data already exists; this is a UI + small projection-math task (reuse the monthly index; sum contributions × forward growth).
+
+2. **Stay-invested drawdown coaching.**
+   Beginners panic-sell in crashes — the behaviour the whole project is designed to resist. Turn the passive drawdown strip into a teaching tool: on hover show **"recovered by {year}, took {N} months"** (data is already in `data/drawdowns.json` / `compute_drawdowns.py`); add a one-line stat such as **"every major drop fully recovered — the longest took {N} years"**; optionally a **"what if you sold at the bottom and stayed in cash"** comparison line to quantify the cost of panic. Directly advances the "make impulsive action harder" UX principle.
+
+3. **Real (inflation-adjusted) toggle.**
+   Beginners underestimate inflation over decades. Add a toggle to switch the chart between **nominal and real (inflation-adjusted)** dollars, making the `US_Inflation_USD` line the explicit "beat this to actually grow" baseline. Teaches why cash and bonds barely grow in real terms and why a long equity horizon matters. Cheap to implement: divide each series by the rebased CPI index before plotting when the toggle is on.
+
+**Sequencing suggestion:** (2) is the highest-leverage for the project's behavioural mission and reuses existing drawdown data; (1) is the most motivating for a beginner; (3) is the smallest lift. A natural v0.4 bundles (2) + (3) (both chart-level, low risk) and treats (1) as its own follow-up.
