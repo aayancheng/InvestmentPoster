@@ -88,6 +88,7 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
                 text=[""] * (len(s) - 1) + [label],
                 textposition="middle right",
                 textfont=dict(size=8, color=colour),
+                cliponaxis=False,
                 hovertemplate=(
                     f"<b>{ETF_DISPLAY_NAMES.get(col, col)}</b><br>"
                     "%{x|%b %Y}<br>"
@@ -113,7 +114,7 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
     )
     fig.update_layout(
         height=460,
-        margin=dict(l=60, r=240, t=20, b=40),
+        margin=dict(l=54, r=160, t=20, b=40),
         hovermode="x unified",
         showlegend=True,
         legend=dict(

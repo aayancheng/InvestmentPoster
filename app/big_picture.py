@@ -17,7 +17,7 @@ import streamlit as st
 
 from analytics import calculate_series_metrics
 from chart_landing import build_landing_chart
-from chart_etf import build_etf_panel, build_allocation_donut
+from chart_etf import build_etf_panel
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -85,7 +85,9 @@ df = load_data()
 # ── Landing: title, stat strip + slider, chart, headline ──────────────────────
 st.markdown("## 2025 The Big Picture")
 
-strip_col, slider_col = st.columns([3, 1])
+# Right spacer column ≈ the chart's right margin, so the slider's right edge
+# lines up with the chart's visible right edge (not the page edge).
+strip_col, slider_col, _rspace = st.columns([3, 1, 0.45])
 with slider_col:
     start_year = st.slider("Start year", 1956, 2010, 1961, 1)
 
@@ -134,19 +136,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-mix_col, growth_col = st.columns([1, 2])
-with mix_col:
-    st.plotly_chart(build_allocation_donut(), use_container_width=True)
-    st.markdown(
-        "<div class='ip-legend'>"
-        "<b style='color:#2E86C1;'>VOO</b> &nbsp;S&P 500 · Core · <b>50%</b><br>"
-        "<b style='color:#E67E22;'>VGT</b> &nbsp;Info Tech · Growth · <b>25%</b><br>"
-        "<b style='color:#27AE60;'>SCHD</b> &nbsp;Dividend · Income · <b>25%</b>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-with growth_col:
-    st.plotly_chart(build_etf_panel(df), use_container_width=True)
+st.plotly_chart(build_etf_panel(df), use_container_width=True)
 
 st.markdown(
     "<div class='ip-headline'>The <b>blend</b> beats holding VOO alone — the growth tilt lifts "

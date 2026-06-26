@@ -114,7 +114,7 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
     )
     fig.update_layout(
         height=560,
-        margin=dict(l=54, r=220, t=10, b=30),
+        margin=dict(l=54, r=150, t=10, b=30),
         hovermode="x unified",
         showlegend=False,
         paper_bgcolor="rgba(0,0,0,0)",
