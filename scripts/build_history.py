@@ -359,25 +359,27 @@ def load_schd() -> pd.Series:
     return _splice_etf(vym, schd, "SCHD_USD")
 
 
-def load_cdn_bond_tr() -> pd.Series:
-    """Canadian 10-year government bond total-return index in CAD.
+def _bond_tr_from_yield(yield_pct: pd.Series, duration: float, name: str) -> pd.Series:
+    """Constant-duration total-return index from a constant-maturity yield series.
 
-    Constructed from FRED IRLTLT01CAM156N (10-year yield, % p.a.) using:
-      monthly TR ≈ yield/12  −  duration × Δyield
-
-    Constant modified duration = 8.0 years (known approximation; acceptable
-    at log scale — noted in chart methodology expander).
+    monthly TR ≈ yield/12  −  duration × Δyield   (ignores convexity; OK at log scale)
+    Returns growth-of-$1000, rebased to 1000 at the first observation.
     """
-    y = _fred("IRLTLT01CAM156N").loc[START:] / 100
-    duration = 8.0
-
+    y = yield_pct.loc[START:] / 100
     rets = pd.Series(0.0, index=y.index)
     for i in range(1, len(y)):
         coupon    = y.iloc[i - 1] / 12
         price_chg = -duration * (y.iloc[i] - y.iloc[i - 1])
         rets.iloc[i] = coupon + price_chg
+    return _ret_to_level(rets).rename(name)
 
-    return _ret_to_level(rets).rename("Bonds")
+
+def load_cdn_bond_tr() -> pd.Series:
+    """Canadian 10-year government bond total-return index in CAD.
+
+    FRED IRLTLT01CAM156N (10-year yield, % p.a.), constant modified duration 8.0y.
+    """
+    return _bond_tr_from_yield(_fred("IRLTLT01CAM156N"), 8.0, "Bonds")
 
 
 def load_tbills() -> pd.Series:
