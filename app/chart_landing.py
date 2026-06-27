@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from chart_main import _rebase, _annualised_return
+from chart_main import _rebase
 
 LANDING_SERIES = ["US_Stocks_USD", "US_Bonds_USD", "US_TBills_USD", "US_Inflation_USD"]
 
@@ -61,21 +61,16 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
         if raw.empty:
             continue
         s = _rebase(raw)
-        cagr = _annualised_return(s)
         colour = LANDING_COLOURS[col]
         name = LANDING_NAMES[col]
-        if col == "US_Stocks_USD":
-            label = f"  {name} · {_compact_money(s.iloc[-1])} · {cagr*100:.0f}%/yr"
-        else:
-            label = f"  {name} · {_compact_money(s.iloc[-1])}"
+        # Value goes in the legend label (not inline), so the plot can use the
+        # full width on any screen — inline end-labels forced a wide right margin
+        # that crushed the chart on mobile.
+        legend_name = f"{name} · {_compact_money(s.iloc[-1])}"
         fig.add_trace(
             go.Scatter(
-                x=s.index, y=s.values, name=name, mode="lines+text",
+                x=s.index, y=s.values, name=legend_name, mode="lines",
                 line=dict(color=colour, width=2.4 if col == "US_Stocks_USD" else 1.7),
-                text=[""] * (len(s) - 1) + [label],
-                textposition="middle right",
-                textfont=dict(size=9, color=colour),
-                cliponaxis=False,
                 hovertemplate=f"<b>{name}</b><br>%{{x|%b %Y}}<br>$%{{y:,.0f}}<extra></extra>",
             ),
             row=1, col=1,
@@ -114,9 +109,15 @@ def build_landing_chart(df: pd.DataFrame, start_year: int = 1961) -> go.Figure:
     )
     fig.update_layout(
         height=560,
-        margin=dict(l=54, r=150, t=10, b=30),
+        margin=dict(l=54, r=16, t=44, b=30),
         hovermode="x unified",
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom", y=1.0,
+            xanchor="left", x=0,
+            font=dict(color="#cfcfcf", size=11),
+        ),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
