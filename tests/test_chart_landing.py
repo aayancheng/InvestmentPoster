@@ -20,7 +20,8 @@ def test_landing_chart_builds(df):
     # 4 core line traces + 1 drawdown trace
     assert len(fig.data) == 5
     names = [t.name for t in fig.data if t.name]
-    assert "US Stocks" in names and "Bonds" in names
+    assert any(n.startswith("US Stocks") for n in names)
+    assert any(n.startswith("Bonds") for n in names)
 
 
 def test_landing_chart_is_dark(df):

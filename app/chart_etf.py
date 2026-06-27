@@ -18,7 +18,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.graph_objects as go
 
-from chart_main import _rebase, _annualised_return
+from chart_main import _rebase
 
 # Display order: blend first so it draws underneath, then the three sleeves.
 ETF_SERIES_ORDER = [
@@ -41,6 +41,22 @@ ETF_DISPLAY_NAMES = {
     "VGT_USD":        "VGT — Info Tech (Growth)",
     "SCHD_USD":       "SCHD — Dividend (Income)",
 }
+
+# Short labels for the legend (the full names are kept for hover). Compact so
+# the horizontal legend fits on a phone instead of forcing a wide right margin.
+ETF_SHORT_NAMES = {
+    "Simple_ETF_USD": "Simple Blend",
+    "VOO_USD":        "VOO (Core)",
+    "VGT_USD":        "VGT (Growth)",
+    "SCHD_USD":       "SCHD (Income)",
+}
+
+
+def _compact_money(v: float) -> str:
+    """16836 -> $16.8k, 8043 -> $8.0k, 950 -> $950."""
+    if v >= 1_000:
+        return f"${v/1_000:.1f}k"
+    return f"${v:,.0f}"
 
 # Width emphasis: the blend is the story, draw it heavier.
 _LINE_WIDTH = {"Simple_ETF_USD": 3.0}
@@ -73,22 +89,18 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
             continue
 
         s = _rebase(raw)
-        cagr = _annualised_return(s)
         end_val = s.iloc[-1]
-        label = f"  ${end_val:,.0f}  {cagr*100:.1f}%p.a."
         colour = ETF_COLOURS.get(col, "#555555")
+        # Value in the legend label (not inline) → plot stays full-width on mobile.
+        legend_name = f"{ETF_SHORT_NAMES.get(col, col)} · {_compact_money(end_val)}"
 
         fig.add_trace(
             go.Scatter(
                 x=s.index,
                 y=s.values,
-                name=ETF_DISPLAY_NAMES.get(col, col),
-                mode="lines+text",
+                name=legend_name,
+                mode="lines",
                 line=dict(color=colour, width=_LINE_WIDTH.get(col, 1.6)),
-                text=[""] * (len(s) - 1) + [label],
-                textposition="middle right",
-                textfont=dict(size=8, color=colour),
-                cliponaxis=False,
                 hovertemplate=(
                     f"<b>{ETF_DISPLAY_NAMES.get(col, col)}</b><br>"
                     "%{x|%b %Y}<br>"
@@ -114,14 +126,14 @@ def build_etf_panel(df: pd.DataFrame, start_date: str = "2006-11-30") -> go.Figu
     )
     fig.update_layout(
         height=460,
-        margin=dict(l=54, r=160, t=20, b=40),
+        margin=dict(l=54, r=16, t=44, b=40),
         hovermode="x unified",
         showlegend=True,
         legend=dict(
             orientation="h",
             yanchor="bottom", y=1.0,
             xanchor="left", x=0.0,
-            font=dict(size=10, color="#cfcfcf"),
+            font=dict(size=11, color="#cfcfcf"),
         ),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
